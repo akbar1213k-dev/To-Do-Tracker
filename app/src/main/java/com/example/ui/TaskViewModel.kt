@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -36,10 +37,25 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         _currentDate.value = date
     }
     
-    fun addTask(name: String) {
+    fun addTask(name: String, recurringDays: Set<Int> = emptySet()) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            repository.insertTask(Task(name = name, date = _currentDate.value))
+            if (recurringDays.isEmpty()) {
+                repository.insertTask(Task(name = name, date = _currentDate.value))
+            } else {
+                val tasks = mutableListOf<Task>()
+                val parsedDate = dateFormat.parse(_currentDate.value) ?: Date()
+                val calendar = Calendar.getInstance().apply { time = parsedDate }
+                
+                // Men-generate task secara otomatis untuk 4 minggu (28 hari) ke depan
+                for (i in 0..27) {
+                    if (recurringDays.contains(calendar.get(Calendar.DAY_OF_WEEK))) {
+                        tasks.add(Task(name = name, date = dateFormat.format(calendar.time)))
+                    }
+                    calendar.add(Calendar.DAY_OF_YEAR, 1)
+                }
+                repository.insertTasks(tasks)
+            }
         }
     }
 
@@ -76,7 +92,7 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
                     val json = inputStream.bufferedReader().use { it.readText() }
                     val backupData = BackupUtil.fromJson(json)
                     backupData?.tasks?.let { tasks ->
-                        // Remove IDs so they get auto-generated, or just insert them with replace
+                        // Remove IDs so they get auto-generated, atau insert dengan me-replace id yang sama
                         repository.insertTasks(tasks)
                     }
                 }

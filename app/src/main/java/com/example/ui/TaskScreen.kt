@@ -64,8 +64,8 @@ fun TaskScreen(viewModel: TaskViewModel) {
     if (showDialog) {
         AddTaskDialog(
             onDismiss = { showDialog = false },
-            onConfirm = { name ->
-                viewModel.addTask(name)
+            onConfirm = { name, recurringDays ->
+                viewModel.addTask(name, recurringDays)
                 showDialog = false
             }
         )
@@ -135,22 +135,66 @@ fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+fun AddTaskDialog(onDismiss: () -> Unit, onConfirm: (String, Set<Int>) -> Unit) {
     var text by remember { mutableStateOf("") }
+    var isRecurring by remember { mutableStateOf(false) }
+    val selectedDays = remember { mutableStateListOf<Int>() }
+
+    val daysOfWeek = listOf(
+        "Senin" to java.util.Calendar.MONDAY,
+        "Selasa" to java.util.Calendar.TUESDAY,
+        "Rabu" to java.util.Calendar.WEDNESDAY,
+        "Kamis" to java.util.Calendar.THURSDAY,
+        "Jumat" to java.util.Calendar.FRIDAY,
+        "Sabtu" to java.util.Calendar.SATURDAY,
+        "Minggu" to java.util.Calendar.SUNDAY
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add New Task") },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("Task Name") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag("task_name_input")
-            )
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text("Task Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().testTag("task_name_input")
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = !isRecurring, onClick = { isRecurring = false })
+                    Text("Sekali")
+                    Spacer(modifier = Modifier.width(16.dp))
+                    RadioButton(selected = isRecurring, onClick = { isRecurring = true })
+                    Text("Beberapa Hari")
+                }
+                if (isRecurring) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    daysOfWeek.forEach { (name, dayValue) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Checkbox(
+                                checked = selectedDays.contains(dayValue),
+                                onCheckedChange = { checked ->
+                                    if (checked) selectedDays.add(dayValue)
+                                    else selectedDays.remove(dayValue)
+                                }
+                            )
+                            Text(name)
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(text) }, modifier = Modifier.testTag("confirm_task_btn")) {
+            Button(
+                onClick = { onConfirm(text, if (isRecurring) selectedDays.toSet() else emptySet()) },
+                modifier = Modifier.testTag("confirm_task_btn")
+            ) {
                 Text("Add")
             }
         },
