@@ -1,0 +1,6 @@
+{
+  "name": "To Do Tracker",
+  "description": "Daily task tracker with automated reports and data backup",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
